@@ -1,0 +1,56 @@
+---
+title: "Sentimental Analysis"
+author: "RB"
+date: "25 April 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r load packages}
+library(caret)
+library(tm)
+library(RTextTools)
+library(e1071)
+library(dplyr)
+library(tidytext)
+```
+
+
+
+```{r load data}
+sentimentdf=as_data_frame(movie.pang02)
+glimpse(sentimentdf)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r convert into tidytext}
+sentimentdf$text=as.character(sentimentdf$text)
+sdf=sentimentdf%>%unnest_tokens(word,text)
+glimpse(sdf)
+```
+
+```{r removing stop words and joining lexicon nrc}
+totals=sdf%>%count(word)%>%rename(total_words=n)
+sdf1=sdf%>%left_join(totals,by="word")
+glimpse(sdf1)
+
+sdf1=sdf1%>%anti_join(stop_words,by="word")%>%inner_join(get_sentiments("nrc"))
+glimpse(sdf1)
+```
+
+```{r Plot top 10 words for each sentiment}
+library(ggplot2)
+sdf1%>%count(word,sentiment)%>%group_by(sentiment)%>%top_n(10)%>%ggplot(aes(x=word,y=n,fill=sentiment))+geom_col(show.legend = F)+facet_wrap(~sentiment,scales="free")+coord_flip()
+
+```
+```{r bing lexicon}
+sdf1=sdf1%>%anti_join(stop_words,by="word")%>%inner_join(get_sentiments("bing"))
+glimpse(sdf1)
+sdf1%>%count(word,sentiment)%>%group_by(sentiment)%>%top_n(10)%>%ggplot(aes(x=word,y=n,fill=sentiment))+geom_col(show.legend = F)+facet_wrap(~sentiment,scales="free")+coord_flip()
+```
+

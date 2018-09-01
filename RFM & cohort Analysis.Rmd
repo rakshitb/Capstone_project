@@ -1,0 +1,58 @@
+---
+title: "Cohort Analysis & RFM_hk"
+author: "RB"
+date: "28 May 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Converting date into date format & cleaning data
+
+```{r}
+hkdata=hk_reshaped
+hkdata$`Membership Last Purchase Date`=as.Date(hkdata$`Membership Last Purchase Date`,format = "%d-%m-%Y")
+class(hkdata$`Membership Last Purchase Date`)
+dim(hkdata)
+hkdata=na.omit(hkdata)
+hkdata=hkdata%>%filter(`Membership LTV`!=-1)
+dim(hkdata)
+View(hkdata)
+```
+`
+
+# RFM Analysis
+
+## Creating a point of view as today's date
+
+```{r}
+now=as.Date("28-05-2018",format="%d-%m-%Y")
+r_table=aggregate(`Membership Last Purchase Date` ~ `Membership Id`,hkdata,FUN = max)
+r_table$r=as.numeric(now-r_table$`Membership Last Purchase Date`)
+f_table=aggregate(total_purchases ~ `Membership Id`,hkdata,FUN = max)
+m_table=aggregate(`Membership LTV` ~ `Membership Id`, hkdata,FUN = max)
+```
+
+## Merging RFM tables to form a data frame
+```{r}
+rfm_table=merge(r_table,f_table,by.x = "Membership Id",by.y = "Membership Id")
+rfm_table=merge(rfm_table,m_table,by.x = "Membership Id",by.y = "Membership Id")
+rfm_table$`Membership Last Purchase Date`=NULL
+names(rfm_table)=c("customerid","r","f","m")
+```
+
+## Segmenting customers based on quantiles
+
+```{r}
+rfm_table$rsegment <- findInterval(rfm_table$r, quantile(rfm_table$r, c(0.0, 0.25, 0.50, 0.75, 1.0)))
+rfm_table$fsegment <- findInterval(rfm_table$f, quantile(rfm_table$f, c(0.0, 0.25, 0.50, 0.75, 1.0)))
+rfm_table$msegment <- findInterval(rfm_table$m, quantile(rfm_table$m, c(0.0, 0.25, 0.50, 0.75, 1.0)))
+
+rfm_table=rfm_table%>%select(customerid,r,f,m,rsegment,fsegment,msegment)%>%unite("rfmscore",rsegment,fsegment,msegment,sep = "")
+rfm_table=rfm_table%>%arrange(rfmscore)
+View(rfm_table)
+summary(rfm_table)
+```
+

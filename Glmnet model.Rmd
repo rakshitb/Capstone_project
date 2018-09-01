@@ -1,0 +1,99 @@
+---
+title: "MA Assignmnet 1"
+author: "RB"
+date: "21 April 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Load Packages,echo=FALSE}
+library(caret)
+library(rpart)
+library(glmnet)
+library(dplyr)
+library(rpart.plot)
+```
+
+
+```{r Loading Data,echo=TRUE}
+data=read.csv("C:/Users/Raghu/Downloads/CD-Additional-Modified.csv")
+df=as_data_frame(data)
+dim(df)
+glimpse(df)
+```
+
+```{r Dividing data into training and testing dataset,echo=TRUE}
+n=nrow(df)
+gp=runif(n)
+trainin=df[gp<0.75,]
+testin=df[gp>=0.75,]
+dim(trainin)
+dim(testin)
+```
+
+```{r Defining cross validation control,echo=TRUE}
+trc=trainControl(method="cv",number=10)
+```
+
+```{r Predicting using decision tree,echo=TRUE}
+set.seed(123)
+fit1=train(y~., data=trainin, method="rpart", trControl=trc, parms=list(split="information"))
+prediction1=predict(fit1,testin,type="prob")[,2]
+prediction11=predict(fit1,testin)
+fit1
+```
+
+```{r Confusion matrix for decision tree,echo=TRUE}
+confusionMatrix(testin$y,prediction11)
+```
+
+```{r ROC plot and AUC for decision tree,echo=TRUE}
+library(ROCR)
+Roc=performance(prediction(prediction1,testin$y),"tpr","fpr")
+plot(Roc,col="blue")
+Auc=performance(prediction(prediction1,testin$y),"auc")
+print(Auc@y.values[[1]])
+```
+
+```{r Introducing dummy varibales for logisitc regression,echo=TRUE}
+df$y=ifelse(df$y=="no",1,0)
+df1=dummyVars("~.",data=df,fullRank = F)
+df2=as_data_frame(predict(df1,df))
+names(df2)
+prop.table(table(df2$y))
+```
+
+```{r Dividing the new datset into training and testing,echo=TRUE}
+n1=nrow(df2)
+gp1=runif(n1)
+training=df[gp1<0.75,]
+testing=df[gp1>=0.75,]
+dim(training)
+dim(testing)
+```
+
+```{r logistic regression and lasso model using glmnet,echo=TRUE}
+set.seed(123)
+fit2=caret::train(y~.,data=trainin,method="glmnet",trControl=trc)
+fit2
+predictions2=predict(fit2,testin,type="prob")[,2]
+predictions21=predict(fit2,testin)
+coef(fit2$finalModel, fit2$bestTune$lambda)
+```
+
+```{r Confusionmatrix for logistic regression,echo=TRUE}
+confusionMatrix(testin$y,predictions21)
+```
+
+```{r ROC and AUC for logisitc regression,echo=TRUE}
+Roc1=performance(prediction(predictions2,testin$y),"tpr","fpr")
+plot(Roc1,col="red")
+Auc1=performance(prediction(predictions2,testin$y),"auc")
+print(Auc1@y.values[[1]])
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
