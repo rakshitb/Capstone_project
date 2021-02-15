@@ -1,0 +1,1 @@
+These are the coding files for the projects I completed as part of my MSC Business Analytics Course. In the capstone Project I employed and tested out different algorithms to discuss and discover different insights based on the transactional data provided
